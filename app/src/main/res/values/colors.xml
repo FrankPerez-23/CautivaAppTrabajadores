@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Identidad Visual CAUTIVA -->
+    <color name="cautiva_primary_orange">#F27824</color>
+    <color name="cautiva_secondary_yellow">#F3B21B</color>
+    <color name="cautiva_alert_red">#D8262C</color>
+    <color name="cautiva_text_dark">#1E1E1E</color>
+    <color name="cautiva_text_gray">#7A7E83</color>
+    <color name="cautiva_background">#F8F9FA</color>
+
+    <!-- Aliases para la paleta exacta pedida -->
+    <color name="color_primary">#F27824</color>
+    <color name="color_secondary">#F3B21B</color>
+    <color name="color_accent_alert">#D8262C</color>
+    <color name="color_text_contrast">#1E1E1E</color>
+    <color name="color_text_secondary">#7A7E83</color>
+    <color name="color_background">#F8F9FA</color>
+
+    <!-- Estados y UI adicionales -->
+    <color name="cautiva_status_active_green">#2E7D32</color>
+    <color name="cautiva_status_inactive_gray">#B0BEC5</color>
+    <color name="cautiva_card_background">#FFFFFF</color>
+
+    <!-- Estándar -->
+    <color name="black">#1E1E1E</color>
+    <color name="white">#FFFFFF</color>
+</resources>

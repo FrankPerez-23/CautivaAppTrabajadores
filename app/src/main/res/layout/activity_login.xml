@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/cautiva_background"
+    tools:device="spec:width=411dp,height=891dp,dpi=420"
+    tools:context=".LoginActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <!-- Header: Logo y Subtítulo -->
+        <ImageView
+            android:id="@+id/img_logo_empresa"
+            android:layout_width="160dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="24dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="Logo Cautiva"
+            android:scaleType="fitStart"
+            android:src="@drawable/logo_cautiva"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_subtitulo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Expertos en concreto"
+            android:textColor="@color/cautiva_text_gray"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/img_logo_empresa" />
+
+        <!-- Tarjeta de Login (CardView idéntico al de MainActivity) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/tarjeta_login"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="@color/cautiva_card_background"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="#E0E0E0"
+            app:strokeWidth="1dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_subtitulo">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:id="@+id/tv_titulo_login"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Acceso Trabajador"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_descripcion_login"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Ingresa tus credenciales para iniciar tu jornada"
+                    android:textColor="@color/cautiva_text_gray"
+                    android:textSize="13sp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="16dp"
+                    android:background="#EEEEEE" />
+
+                <!-- Etiqueta Correo -->
+                <TextView
+                    android:id="@+id/tv_etiqueta_correo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Correo Electrónico"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Campo Correo -->
+                <EditText
+                    android:id="@+id/et_correo"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_edit_text"
+                    android:hint="ejemplo@cautiva.com"
+                    android:inputType="textEmailAddress"
+                    android:paddingHorizontal="14dp"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textColorHint="@color/cautiva_text_gray"
+                    android:textSize="14sp" />
+
+                <!-- Etiqueta Contraseña -->
+                <TextView
+                    android:id="@+id/tv_etiqueta_contrasena"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Contraseña"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <!-- Campo Contraseña -->
+                <EditText
+                    android:id="@+id/et_contrasena"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_edit_text"
+                    android:hint="••••••••"
+                    android:inputType="textPassword"
+                    android:paddingHorizontal="14dp"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textColorHint="@color/cautiva_text_gray"
+                    android:textSize="14sp" />
+
+                <!-- Mensaje de Error -->
+                <TextView
+                    android:id="@+id/tv_mensaje_error"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:textColor="@color/cautiva_alert_red"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    tools:text="Error al iniciar sesión. Revisa tus datos."
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Botón Iniciar Sesión (Misma escala de botón que MainActivity) -->
+        <Button
+            android:id="@+id/btn_iniciar_sesion"
+            android:layout_width="0dp"
+            android:layout_height="64dp"
+            android:layout_marginTop="28dp"
+            android:backgroundTint="@color/cautiva_primary_orange"
+            android:text="INICIAR SESIÓN"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            app:cornerRadius="16dp"
+            app:elevation="6dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tarjeta_login" />
+
+        <!-- ProgressBar de Carga -->
+        <ProgressBar
+            android:id="@+id/pb_cargando_login"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:indeterminateTint="@color/cautiva_primary_orange"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btn_iniciar_sesion" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

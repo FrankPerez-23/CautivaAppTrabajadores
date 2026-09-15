@@ -1,0 +1,110 @@
+package com.example.cautivaapp
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+class LoginActivity : AppCompatActivity() {
+
+    private lateinit var campoCorreo: EditText
+    private lateinit var campoContrasena: EditText
+    private lateinit var botonIniciarSesion: Button
+    private lateinit var indicadorCargando: ProgressBar
+    private lateinit var textoMensajeError: TextView
+    private lateinit var gestorSesion: GestorSesion
+
+    override fun onCreate(estadoGuardado: Bundle?) {
+        super.onCreate(estadoGuardado)
+        setContentView(R.layout.activity_login)
+
+        gestorSesion = GestorSesion(this)
+
+        // Redirigir a MainActivity si la sesión ya está iniciada
+        if (gestorSesion.sesionIniciada()) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
+
+        // Búsqueda estricta mediante findViewById con IDs en español
+        campoCorreo = findViewById(R.id.et_correo)
+        campoContrasena = findViewById(R.id.et_contrasena)
+        botonIniciarSesion = findViewById(R.id.btn_iniciar_sesion)
+        indicadorCargando = findViewById(R.id.pb_cargando_login)
+        textoMensajeError = findViewById(R.id.tv_mensaje_error)
+
+        botonIniciarSesion.setOnClickListener {
+            ejecutarInicioSesion()
+        }
+    }
+
+    private fun ejecutarInicioSesion() {
+        val correo = campoCorreo.text.toString().trim()
+        val contrasena = campoContrasena.text.toString().trim()
+
+        if (correo.isEmpty()) {
+            campoCorreo.error = "Ingresa tu correo electrónico"
+            campoCorreo.requestFocus()
+            return
+        }
+
+        if (contrasena.isEmpty()) {
+            campoContrasena.error = "Ingresa tu contraseña"
+            campoContrasena.requestFocus()
+            return
+        }
+
+        cambiarEstadoCargando(true)
+
+        lifecycleScope.launch {
+            val resultadoAutenticacion = GestorSupabase.autenticarUsuario(correo, contrasena)
+
+            resultadoAutenticacion.fold(
+                onSuccess = { datosUsuario ->
+                    // Obtener perfil del chofer desde Supabase ('perfiles')
+                    val resultadoPerfil = GestorSupabase.obtenerPerfil(datosUsuario.idUsuario, datosUsuario.tokenAcceso)
+                    val nombreChofer = resultadoPerfil.getOrNull()?.nombreCompleto ?: "Chofer Cautiva"
+
+                    // Guardar sesión local
+                    gestorSesion.guardarSesion(
+                        idUsuario = datosUsuario.idUsuario,
+                        tokenAcceso = datosUsuario.tokenAcceso,
+                        correo = datosUsuario.correo,
+                        nombreChofer = nombreChofer
+                    )
+
+                    Toast.makeText(this@LoginActivity, "¡Bienvenido, $nombreChofer!", Toast.LENGTH_SHORT).show()
+
+                    // Navegar a la pantalla principal
+                    val intencionNavegacion = Intent(this@LoginActivity, MainActivity::class.java)
+                    startActivity(intencionNavegacion)
+                    finish()
+                },
+                onFailure = { excepcion ->
+                    cambiarEstadoCargando(false)
+                    textoMensajeError.text = excepcion.message ?: "Error al autenticar con Supabase"
+                    textoMensajeError.visibility = View.VISIBLE
+                }
+            )
+        }
+    }
+
+    private fun cambiarEstadoCargando(estaCargando: Boolean) {
+        if (estaCargando) {
+            indicadorCargando.visibility = View.VISIBLE
+            botonIniciarSesion.isEnabled = false
+            textoMensajeError.visibility = View.GONE
+        } else {
+            indicadorCargando.visibility = View.GONE
+            botonIniciarSesion.isEnabled = true
+        }
+    }
+}

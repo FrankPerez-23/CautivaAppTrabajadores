@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.CautivaApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/cautiva_primary_orange</item>
+        <item name="colorSecondary">@color/cautiva_secondary_yellow</item>
+        <item name="colorError">@color/cautiva_alert_red</item>
+        <item name="android:windowBackground">@color/cautiva_background</item>
+        <item name="android:statusBarColor">@color/cautiva_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="Theme.CautivaApp" parent="Base.Theme.CautivaApp" />
+</resources>
