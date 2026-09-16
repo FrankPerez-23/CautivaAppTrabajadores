@@ -16,6 +16,8 @@ class GestorSesion(contexto: Context) {
         private const val CLAVE_CORREO = "correo"
         private const val CLAVE_JORNADA_ACTIVA = "jornada_activa"
         private const val CLAVE_ID_TURNO = "id_turno"
+        private const val CLAVE_ID_VEHICULO = "id_vehiculo"
+        private const val CLAVE_PLACA_VEHICULO = "placa_vehiculo"
     }
 
     fun guardarSesion(
@@ -33,10 +35,17 @@ class GestorSesion(contexto: Context) {
         }
     }
 
-    fun establecerEstadoJornada(activa: Boolean, idTurno: String? = null) {
+    fun establecerEstadoJornada(
+        activa: Boolean,
+        idTurno: String? = null,
+        idVehiculo: String? = null,
+        placaVehiculo: String? = null,
+    ) {
         preferencias.edit().apply {
             putBoolean(CLAVE_JORNADA_ACTIVA, activa)
             putString(CLAVE_ID_TURNO, idTurno)
+            putString(CLAVE_ID_VEHICULO, idVehiculo)
+            putString(CLAVE_PLACA_VEHICULO, placaVehiculo)
             apply()
         }
     }
@@ -54,6 +63,8 @@ class GestorSesion(contexto: Context) {
     fun obtenerNombreChofer(): String? = preferencias.getString(CLAVE_NOMBRE_CHOFER, "Chofer")
     fun obtenerCorreo(): String? = preferencias.getString(CLAVE_CORREO, null)
     fun obtenerIdTurno(): String? = preferencias.getString(CLAVE_ID_TURNO, null)
+    fun obtenerIdVehiculo(): String? = preferencias.getString(CLAVE_ID_VEHICULO, null)
+    fun obtenerPlacaVehiculo(): String? = preferencias.getString(CLAVE_PLACA_VEHICULO, null)
 
     fun cerrarSesion() {
         preferencias.edit().clear().apply()

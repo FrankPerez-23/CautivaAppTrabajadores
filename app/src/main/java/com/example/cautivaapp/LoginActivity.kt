@@ -27,9 +27,10 @@ class LoginActivity : AppCompatActivity() {
 
         gestorSesion = GestorSesion(this)
 
-        // Redirigir a MainActivity si la sesión ya está iniciada
+        // Redirigir a MainActivity o InicioTurnoActivity según estado de jornada
         if (gestorSesion.sesionIniciada()) {
-            startActivity(Intent(this, MainActivity::class.java))
+            val destino = if (gestorSesion.jornadaActiva()) MainActivity::class.java else InicioTurnoActivity::class.java
+            startActivity(Intent(this, destino))
             finish()
             return
         }
@@ -83,8 +84,8 @@ class LoginActivity : AppCompatActivity() {
 
                     Toast.makeText(this@LoginActivity, "¡Bienvenido, $nombreChofer!", Toast.LENGTH_SHORT).show()
 
-                    // Navegar a la pantalla principal
-                    val intencionNavegacion = Intent(this@LoginActivity, MainActivity::class.java)
+                    // Navegar a la pantalla de Inicio de Turno (Selección de Vehículo)
+                    val intencionNavegacion = Intent(this@LoginActivity, InicioTurnoActivity::class.java)
                     startActivity(intencionNavegacion)
                     finish()
                 },

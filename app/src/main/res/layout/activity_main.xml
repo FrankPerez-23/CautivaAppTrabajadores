@@ -235,19 +235,5 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/btn_accion_jornada" />
 
-        <!-- Botón Cerrar Sesión -->
-        <Button
-            android:id="@+id/btn_cerrar_sesion"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:text="Cerrar sesión"
-            android:textColor="@color/cautiva_text_gray"
-            android:textSize="15sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/pb_cargando_principal" />
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

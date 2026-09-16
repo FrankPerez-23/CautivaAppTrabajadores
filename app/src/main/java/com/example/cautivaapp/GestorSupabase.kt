@@ -137,9 +137,41 @@ object GestorSupabase {
         }
 
     /**
-     * Registra el inicio de turno en la tabla 'turnos_laborales' (columnas: usuario_id, inicio_programado, fin_programado, inicio_real, estado)
+     * Consulta los vehículos activos en la tabla 'vehiculos' (estado = 'ACTIVO')
      */
-    suspend fun iniciarTurnoLaboral(idChofer: String, tokenAcceso: String): Result<String> =
+    suspend fun obtenerVehiculosActivos(tokenAcceso: String): Result<List<Vehiculo>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val urlCompleta = "$URL_SUPABASE/rest/v1/vehiculos?estado=eq.ACTIVO&select=*"
+                val solicitud = Request.Builder()
+                    .url(urlCompleta)
+                    .addHeader("apikey", CLAVE_ANONIMA_SUPABASE)
+                    .addHeader("Authorization", "Bearer $tokenAcceso")
+                    .get()
+                    .build()
+
+                clienteHttp.newCall(solicitud).execute().use { respuesta ->
+                    val cuerpoTexto = respuesta.body?.string() ?: "[]"
+                    if (respuesta.isSuccessful) {
+                        val arregloJson = JSONArray(cuerpoTexto)
+                        val listaVehiculos = mutableListOf<Vehiculo>()
+                        for (i in 0 until arregloJson.length()) {
+                            listaVehiculos.add(Vehiculo.desdeJson(arregloJson.getJSONObject(i)))
+                        }
+                        Result.success(listaVehiculos)
+                    } else {
+                        Result.failure(Exception("Error al consultar vehículos (${respuesta.code})"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /**
+     * Registra el inicio de turno en la tabla 'turnos_laborales' (columnas: usuario_id, vehiculo_id, inicio_programado, fin_programado, inicio_real, estado)
+     */
+    suspend fun iniciarTurnoLaboral(idChofer: String, vehiculoId: String?, tokenAcceso: String): Result<String> =
         withContext(Dispatchers.IO) {
             try {
                 val urlCompleta = "$URL_SUPABASE/rest/v1/turnos_laborales"
@@ -148,6 +180,11 @@ object GestorSupabase {
 
                 val cuerpoJson = JSONObject().apply {
                     put("usuario_id", idChofer)
+                    if (!vehiculoId.isNullOrEmpty()) {
+                        put("vehiculo_id", vehiculoId)
+                    } else {
+                        put("vehiculo_id", JSONObject.NULL)
+                    }
                     put("inicio_programado", ahoraIso)
                     put("fin_programado", finProgramadoIso)
                     put("inicio_real", ahoraIso)
@@ -181,6 +218,9 @@ object GestorSupabase {
                 Result.failure(e)
             }
         }
+
+    suspend fun iniciarTurnoLaboral(idChofer: String, tokenAcceso: String): Result<String> =
+        iniciarTurnoLaboral(idChofer, null, tokenAcceso)
 
     /**
      * Registra el cierre de turno en la tabla 'turnos_laborales' (columnas: fin_real, estado)
@@ -303,4 +343,31 @@ object GestorSupabase {
             Result.failure(e)
         }
     }
+
+    /**
+     * Elimina el registro de la tabla 'ubicacion_en_vivo' al finalizar turno (Política de Privacidad)
+     */
+    suspend fun eliminarUbicacionEnVivo(idUsuario: String, tokenAcceso: String): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+            try {
+                val urlCompleta = "$URL_SUPABASE/rest/v1/ubicacion_en_vivo?usuario_id=eq.$idUsuario"
+                val solicitud = Request.Builder()
+                    .url(urlCompleta)
+                    .addHeader("apikey", CLAVE_ANONIMA_SUPABASE)
+                    .addHeader("Authorization", "Bearer $tokenAcceso")
+                    .addHeader("Content-Type", "application/json")
+                    .delete()
+                    .build()
+
+                clienteHttp.newCall(solicitud).execute().use { respuesta ->
+                    if (respuesta.isSuccessful) {
+                        Result.success(true)
+                    } else {
+                        Result.failure(Exception("Error al eliminar ubicación en vivo (${respuesta.code})"))
+                    }
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 }

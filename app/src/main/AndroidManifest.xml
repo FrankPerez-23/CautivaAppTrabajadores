@@ -44,6 +44,12 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- Activity de Selección de Vehículo / Inicio de Turno -->
+        <activity
+            android:name=".InicioTurnoActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Foreground Service de Ubicación en Español -->
         <service
             android:name=".ServicioUbicacion"

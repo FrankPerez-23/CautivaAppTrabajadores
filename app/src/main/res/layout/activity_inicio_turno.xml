@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cautiva_background"
+    android:padding="24dp"
+    tools:context=".InicioTurnoActivity">
+
+    <!-- Logo en Cabecera -->
+    <ImageView
+        android:id="@+id/img_logo_cabecera"
+        android:layout_width="140dp"
+        android:layout_height="48dp"
+        android:layout_marginTop="4dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="Logo Cautiva"
+        android:scaleType="fitStart"
+        android:src="@drawable/logo_cautiva"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Cabecera: Saludo al Chofer y Botón de Cerrar Sesión -->
+    <LinearLayout
+        android:id="@+id/layout_cabecera"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/img_logo_cabecera"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_etiqueta_empresa"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="CAUTIVA - CONCRETO"
+                android:textColor="@color/cautiva_primary_orange"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05" />
+
+            <TextView
+                android:id="@+id/tv_saludo_chofer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Hola, Javier Maldonado"
+                android:textColor="@color/cautiva_text_dark"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_cerrar_sesion_inicio"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cerrar Sesión"
+            android:textColor="@color/cautiva_alert_red"
+            android:textSize="12sp"
+            app:strokeColor="@color/cautiva_alert_red"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+
+    <!-- Contenedor Principal del Formulario -->
+    <LinearLayout
+        android:id="@+id/layout_formulario_turno"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_cabecera"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Selecciona tu Unidad de Trabajo"
+            android:textColor="@color/cautiva_text_dark"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Busca por placa (ej. V4A) o marca/modelo del camión mixer."
+            android:textColor="@color/cautiva_text_gray"
+            android:textSize="13sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Campo de Búsqueda con AutoCompleteTextView -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_buscar_vehiculo"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Número de Placa o Modelo"
+            app:boxStrokeColor="@color/cautiva_primary_orange"
+            app:hintTextColor="@color/cautiva_primary_orange"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp">
+
+            <AutoCompleteTextView
+                android:id="@+id/et_buscar_vehiculo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textAutoComplete|textCapCharacters"
+                android:imeOptions="actionDone"
+                android:maxLines="1"
+                android:textSize="16sp"
+                android:padding="16dp" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Tarjeta Informativa del Vehículo Seleccionado (Oculta inicialmente) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_vehiculo_seleccionado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/cautiva_card_background"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/cautiva_primary_orange"
+            app:strokeWidth="2dp"
+            tools:visibility="visible">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="20dp">
+
+                <ImageView
+                    android:id="@+id/iv_icono_camion"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@mipmap/ic_launcher"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    android:contentDescription="Icono Camión Mixer" />
+
+                <TextView
+                    android:id="@+id/tv_etiqueta_unidad_asignada"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="UNIDAD SELECCIONADA"
+                    android:textColor="@color/cautiva_text_gray"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="16dp"
+                    app:layout_constraintTop_toTopOf="@id/iv_icono_camion"
+                    app:layout_constraintStart_toEndOf="@id/iv_icono_camion"
+                    app:layout_constraintEnd_toStartOf="@id/btn_cambiar_unidad" />
+
+                <TextView
+                    android:id="@+id/tv_placa_seleccionada"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    tools:text="V4A-789"
+                    android:textColor="@color/cautiva_primary_orange"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="16dp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_etiqueta_unidad_asignada"
+                    app:layout_constraintStart_toEndOf="@id/iv_icono_camion"
+                    app:layout_constraintEnd_toStartOf="@id/btn_cambiar_unidad" />
+
+                <TextView
+                    android:id="@+id/tv_marca_modelo_seleccionada"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    tools:text="Volvo FMX 440 (2023)"
+                    android:textColor="@color/cautiva_text_dark"
+                    android:textSize="14sp"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="2dp"
+                    app:layout_constraintTop_toBottomOf="@id/tv_placa_seleccionada"
+                    app:layout_constraintStart_toEndOf="@id/iv_icono_camion"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_cambiar_unidad"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cambiar"
+                    android:textSize="12sp"
+                    android:textColor="@color/cautiva_text_gray"
+                    app:strokeColor="@color/cautiva_text_gray"
+                    app:cornerRadius="8dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+    <!-- Botón Principal: INICIAR JORNADA LABORAL -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_iniciar_jornada_laboral"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="INICIAR JORNADA LABORAL"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/cautiva_primary_orange"
+        app:cornerRadius="12dp"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Indicador de Progreso Circular (Cargando) -->
+    <ProgressBar
+        android:id="@+id/pb_cargando_inicio_turno"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminateTint="@color/cautiva_primary_orange"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

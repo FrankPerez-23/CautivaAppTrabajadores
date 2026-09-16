@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textoVelocidadActual: TextView
     private lateinit var textoUltimaSincronizacion: TextView
     private lateinit var botonAccionJornada: Button
-    private lateinit var botonCerrarSesion: Button
     private lateinit var indicadorCargandoPrincipal: ProgressBar
 
     private lateinit var gestorSesion: GestorSesion
@@ -94,21 +93,46 @@ class MainActivity : AppCompatActivity() {
         textoVelocidadActual = findViewById(R.id.tv_velocidad_actual)
         textoUltimaSincronizacion = findViewById(R.id.tv_ultima_sincronizacion)
         botonAccionJornada = findViewById(R.id.btn_accion_jornada)
-        botonCerrarSesion = findViewById(R.id.btn_cerrar_sesion)
         indicadorCargandoPrincipal = findViewById(R.id.pb_cargando_principal)
 
         // Asignar nombre del chofer obtenido previamente de 'perfiles'
         val nombreChofer = gestorSesion.obtenerNombreChofer() ?: "Chofer"
         textoBienvenida.text = "Bienvenido, $nombreChofer"
 
-        actualizarEstadoInterfaz(gestorSesion.jornadaActiva())
+        val jornadaActiva = gestorSesion.jornadaActiva()
+        actualizarEstadoInterfaz(jornadaActiva)
+
+        if (jornadaActiva) {
+            // Mostrar telemetría inicial de inmediato sin esperar al primer fix GPS
+            val nivelBateriaActual = obtenerNivelBateriaLocal()
+            textoNivelBateria.text = "$nivelBateriaActual %"
+            textoVelocidadActual.text = "0.0 km/h"
+            textoUltimaSincronizacion.text = "Última sincronización: En curso..."
+
+            // Garantizar que el servicio de rastreo GPS esté activo en primer plano
+            val intencionServicio = Intent(this, ServicioUbicacion::class.java).apply {
+                action = ServicioUbicacion.ACCION_INICIAR
+            }
+            ContextCompat.startForegroundService(this, intencionServicio)
+        }
 
         botonAccionJornada.setOnClickListener {
             verificarPermisosYConmutarJornada()
         }
+    }
 
-        botonCerrarSesion.setOnClickListener {
-            ejecutarCierreSesion()
+    private fun obtenerNivelBateriaLocal(): Int {
+        val estadoBateria: Intent? = registerReceiver(
+            null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
+        val nivel: Int = estadoBateria?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val escala: Int = estadoBateria?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+
+        return if (nivel >= 0 && escala > 0) {
+            (nivel * 100 / escala.toFloat()).toInt()
+        } else {
+            100
         }
     }
 
@@ -156,8 +180,22 @@ class MainActivity : AppCompatActivity() {
         if (!jornadaActivaActual) {
             iniciarJornadaLaboral()
         } else {
-            finalizarJornadaLaboral()
+            mostrarDialogoConfirmacionFinalizacion()
         }
+    }
+
+    private fun mostrarDialogoConfirmacionFinalizacion() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("¿Finalizar jornada laboral?")
+            .setMessage("Se detendrá el rastreo GPS y tu ubicación dejará de ser visible para la administración.")
+            .setNegativeButton("Cancelar") { dialogo, _ ->
+                dialogo.dismiss()
+            }
+            .setPositiveButton("Finalizar") { dialogo, _ ->
+                dialogo.dismiss()
+                ejecutarSecuenciaFinalizacion()
+            }
+            .show()
     }
 
     private fun iniciarJornadaLaboral() {
@@ -191,28 +229,77 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun finalizarJornadaLaboral() {
+    private fun ejecutarSecuenciaFinalizacion() {
         cambiarEstadoCargandoPrincipal(true)
 
+        val idChofer = gestorSesion.obtenerIdUsuario()
         val idTurno = gestorSesion.obtenerIdTurno()
-        val tokenAcceso = gestorSesion.obtenerTokenAcceso() ?: return
+        val tokenAcceso = gestorSesion.obtenerTokenAcceso()
+
+        if (idChofer == null || tokenAcceso == null) {
+            cambiarEstadoCargandoPrincipal(false)
+            Toast.makeText(this, "Error de sesión. Vuelve a iniciar sesión.", Toast.LENGTH_LONG).show()
+            return
+        }
 
         lifecycleScope.launch {
-            if (!idTurno.isNullOrEmpty()) {
-                GestorSupabase.finalizarTurnoLaboral(idTurno, tokenAcceso)
+            try {
+                // Paso 1: Detener inmediatamente el ForegroundService de rastreo GPS
+                val intencionServicio = Intent(this@MainActivity, ServicioUbicacion::class.java).apply {
+                    action = ServicioUbicacion.ACCION_DETENER
+                }
+                stopService(intencionServicio)
+
+                // Paso 2: Actualizar en Supabase turnos_laborales (estado = 'FINALIZADO', fin_real = NOW())
+                if (!idTurno.isNullOrEmpty()) {
+                    val resultadoTurno = GestorSupabase.finalizarTurnoLaboral(idTurno, tokenAcceso)
+                    if (resultadoTurno.isFailure) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Advertencia: No se pudo sincronizar el cierre de turno con el servidor.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
+                // Paso 3: Ejecutar DELETE en Supabase sobre ubicacion_en_vivo filtrando por usuario_id (Protección de Privacidad)
+                val resultadoPrivacidad = GestorSupabase.eliminarUbicacionEnVivo(idChofer, tokenAcceso)
+                if (resultadoPrivacidad.isFailure) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Advertencia: Error al eliminar ubicación en vivo del servidor.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                // Paso 4: Limpiar variables de sesión local y redirigir a InicioTurnoActivity
+                gestorSesion.establecerEstadoJornada(activa = false, idTurno = null, idVehiculo = null, placaVehiculo = null)
+                cambiarEstadoCargandoPrincipal(false)
+                Toast.makeText(this@MainActivity, "Jornada finalizada correctamente. Ubicación oculta.", Toast.LENGTH_LONG).show()
+
+                val intencionInicioTurno = Intent(this@MainActivity, InicioTurnoActivity::class.java)
+                startActivity(intencionInicioTurno)
+                finish()
+
+            } catch (e: Exception) {
+                cambiarEstadoCargandoPrincipal(false)
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error de red al finalizar jornada: ${e.localizedMessage}",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Asegurar limpieza local y parada de servicio incluso ante fallo crítico de red
+                val intencionServicio = Intent(this@MainActivity, ServicioUbicacion::class.java).apply {
+                    action = ServicioUbicacion.ACCION_DETENER
+                }
+                stopService(intencionServicio)
+                gestorSesion.establecerEstadoJornada(activa = false, idTurno = null, idVehiculo = null, placaVehiculo = null)
+
+                val intencionInicioTurno = Intent(this@MainActivity, InicioTurnoActivity::class.java)
+                startActivity(intencionInicioTurno)
+                finish()
             }
-
-            gestorSesion.establecerEstadoJornada(activa = false, idTurno = null)
-
-            // Detener Foreground Service de ubicación GPS
-            val intencionServicio = Intent(this@MainActivity, ServicioUbicacion::class.java).apply {
-                action = ServicioUbicacion.ACCION_DETENER
-            }
-            startService(intencionServicio)
-
-            actualizarEstadoInterfaz(jornadaActiva = false)
-            cambiarEstadoCargandoPrincipal(false)
-            Toast.makeText(this@MainActivity, "Jornada finalizada", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -246,28 +333,9 @@ class MainActivity : AppCompatActivity() {
         if (estaCargando) {
             indicadorCargandoPrincipal.visibility = View.VISIBLE
             botonAccionJornada.isEnabled = false
-            botonCerrarSesion.isEnabled = false
         } else {
             indicadorCargandoPrincipal.visibility = View.GONE
             botonAccionJornada.isEnabled = true
-            botonCerrarSesion.isEnabled = true
         }
-    }
-
-    private fun ejecutarCierreSesion() {
-        if (gestorSesion.jornadaActiva()) {
-            Toast.makeText(
-                this,
-                "Debes finalizar tu jornada antes de cerrar sesión.",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        gestorSesion.cerrarSesion()
-        Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show()
-
-        startActivity(Intent(this, LoginActivity::class.java))
-        finish()
     }
 }
