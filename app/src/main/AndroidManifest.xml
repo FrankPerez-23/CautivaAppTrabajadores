@@ -9,6 +9,7 @@
     <!-- Permisos de Ubicación -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- Permisos de Servicio en Primer Plano (Foreground Service) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -16,6 +17,9 @@
 
     <!-- Permisos de Notificación (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Permiso para solicitar exención de optimización de batería (Modo Doze) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"
@@ -50,9 +54,9 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Foreground Service de Ubicación en Español -->
+        <!-- Servicio de Rastreo GPS Optimizado (Foreground Service) -->
         <service
-            android:name=".ServicioUbicacion"
+            android:name=".ServicioRastreoGps"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />

@@ -30,22 +30,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textoTituloEstado: TextView
     private lateinit var textoSubtituloEstado: TextView
     private lateinit var textoNivelBateria: TextView
-    private lateinit var textoVelocidadActual: TextView
     private lateinit var textoUltimaSincronizacion: TextView
     private lateinit var botonAccionJornada: Button
     private lateinit var indicadorCargandoPrincipal: ProgressBar
 
     private lateinit var gestorSesion: GestorSesion
 
-    // Receptor de transmisión local para actualizar velocidad y batería en pantalla
+    // Receptor de transmisión local para actualizar batería en pantalla
     private val receptorTransmisionUbicacion = object : BroadcastReceiver() {
         override fun onReceive(contexto: Context?, intencion: Intent?) {
             if (intencion?.action == ServicioUbicacion.ACCION_TRANSMISION_UBICACION) {
-                val velocidadKmh = intencion.getFloatExtra(ServicioUbicacion.EXTRA_VELOCIDAD_KMH, 0.0f)
                 val nivelBateria = intencion.getIntExtra(ServicioUbicacion.EXTRA_NIVEL_BATERIA, 100)
                 val marcaTiempo = intencion.getLongExtra(ServicioUbicacion.EXTRA_MARCA_TIEMPO, System.currentTimeMillis())
 
-                textoVelocidadActual.text = String.format(Locale.US, "%.1f km/h", velocidadKmh)
                 textoNivelBateria.text = "$nivelBateria %"
 
                 val horaFormateada = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(marcaTiempo))
@@ -90,7 +87,6 @@ class MainActivity : AppCompatActivity() {
         textoTituloEstado = findViewById(R.id.tv_titulo_estado)
         textoSubtituloEstado = findViewById(R.id.tv_subtitulo_estado)
         textoNivelBateria = findViewById(R.id.tv_nivel_bateria)
-        textoVelocidadActual = findViewById(R.id.tv_velocidad_actual)
         textoUltimaSincronizacion = findViewById(R.id.tv_ultima_sincronizacion)
         botonAccionJornada = findViewById(R.id.btn_accion_jornada)
         indicadorCargandoPrincipal = findViewById(R.id.pb_cargando_principal)
@@ -106,7 +102,6 @@ class MainActivity : AppCompatActivity() {
             // Mostrar telemetría inicial de inmediato sin esperar al primer fix GPS
             val nivelBateriaActual = obtenerNivelBateriaLocal()
             textoNivelBateria.text = "$nivelBateriaActual %"
-            textoVelocidadActual.text = "0.0 km/h"
             textoUltimaSincronizacion.text = "Última sincronización: En curso..."
 
             // Garantizar que el servicio de rastreo GPS esté activo en primer plano
@@ -318,7 +313,6 @@ class MainActivity : AppCompatActivity() {
             indicadorPuntoEstado.setBackgroundResource(R.drawable.dot_inactive)
             textoTituloEstado.text = "Fuera de jornada"
             textoSubtituloEstado.text = "Presiona el botón para comenzar a transmitir"
-            textoVelocidadActual.text = "0.0 km/h"
             textoUltimaSincronizacion.text = "Última sincronización: Ninguna"
 
             // Estado Apagado: Botón Naranja (#F27824) con texto "INICIAR JORNADA"
