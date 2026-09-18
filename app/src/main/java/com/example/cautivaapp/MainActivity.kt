@@ -1,14 +1,18 @@
 package com.example.cautivaapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -59,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         val permisoUbicacionAproximadaConcedido = mapaPermisos[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (permisoUbicacionPrecisaConcedido || permisoUbicacionAproximadaConcedido) {
+            verificarYPedirExencionBateria()
             procesarConmutacionJornada()
         } else {
             Toast.makeText(
@@ -104,6 +109,8 @@ class MainActivity : AppCompatActivity() {
             textoNivelBateria.text = "$nivelBateriaActual %"
             textoUltimaSincronizacion.text = "Última sincronización: En curso..."
 
+            verificarYPedirExencionBateria()
+
             // Garantizar que el servicio de rastreo GPS esté activo en primer plano
             val intencionServicio = Intent(this, ServicioUbicacion::class.java).apply {
                 action = ServicioUbicacion.ACCION_INICIAR
@@ -112,7 +119,79 @@ class MainActivity : AppCompatActivity() {
         }
 
         botonAccionJornada.setOnClickListener {
-            verificarPermisosYConmutarJornada()
+            lifecycleScope.launch {
+                if (validarSesionDispositivoAntesDeAccion()) {
+                    verificarPermisosYConmutarJornada()
+                }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            validarSesionDispositivoAntesDeAccion()
+        }
+    }
+
+    /**
+     * Consulta a Supabase si este teléfono sigue siendo la sesión activa registrada en 'perfiles.metadatos'.
+     * Si otro teléfono inició sesión, cancela la acción, cierra la sesión local y redirige al Login.
+     */
+    private suspend fun validarSesionDispositivoAntesDeAccion(): Boolean {
+        val idUsuario = gestorSesion.obtenerIdUsuario() ?: return false
+        val tokenAcceso = gestorSesion.obtenerTokenAcceso() ?: ""
+        val idDispositivoLocal = gestorSesion.obtenerIdDispositivoLocal()
+
+        val resultadoDisp = GestorSupabase.obtenerIdDispositivoRegistrado(idUsuario, tokenAcceso)
+        val idRegistradoEnServidor = resultadoDisp.getOrNull()
+
+        if (!idRegistradoEnServidor.isNullOrEmpty() && idRegistradoEnServidor != idDispositivoLocal) {
+            // Sesión anulada en la base de datos por otro teléfono
+            val intencionServicio = Intent(this, ServicioUbicacion::class.java).apply {
+                action = ServicioUbicacion.ACCION_DETENER
+            }
+            stopService(intencionServicio)
+
+            gestorSesion.cerrarSesion()
+            Toast.makeText(
+                this,
+                "Se ha iniciado sesión en otro dispositivo. Tu sesión en este teléfono se ha cerrado.",
+                Toast.LENGTH_LONG
+            ).show()
+
+            val intencionLogin = Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intencionLogin)
+            finish()
+            return false
+        }
+        return true
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun verificarYPedirExencionBateria() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val gestorEnergia = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val nombrePaquete = packageName
+
+            if (!gestorEnergia.isIgnoringBatteryOptimizations(nombrePaquete)) {
+                try {
+                    val intencionExencion = Intent().apply {
+                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        data = Uri.parse("package:$nombrePaquete")
+                    }
+                    startActivity(intencionExencion)
+                } catch (_: Exception) {
+                    try {
+                        val intencionAjustes = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(intencionAjustes)
+                    } catch (_: Exception) {
+                        // Manejo seguro ante ROMs con configuraciones restringidas
+                    }
+                }
+            }
         }
     }
 
@@ -165,6 +244,7 @@ class MainActivity : AppCompatActivity() {
         if (listaPermisosRequeridos.isNotEmpty()) {
             lanzadorSolicitudPermisos.launch(listaPermisosRequeridos.toTypedArray())
         } else {
+            verificarYPedirExencionBateria()
             procesarConmutacionJornada()
         }
     }
@@ -200,6 +280,12 @@ class MainActivity : AppCompatActivity() {
         val tokenAcceso = gestorSesion.obtenerTokenAcceso() ?: return
 
         lifecycleScope.launch {
+            // VERIFICACIÓN OBLIGATORIA EN BASE DE DATOS ANTES DE CUALQUIER ACCIÓN
+            if (!validarSesionDispositivoAntesDeAccion()) {
+                cambiarEstadoCargandoPrincipal(false)
+                return@launch
+            }
+
             val resultadoTurno = GestorSupabase.iniciarTurnoLaboral(idChofer, tokenAcceso)
 
             resultadoTurno.fold(
@@ -238,6 +324,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            // VERIFICACIÓN OBLIGATORIA EN BASE DE DATOS ANTES DE CUALQUIER ACCIÓN
+            if (!validarSesionDispositivoAntesDeAccion()) {
+                cambiarEstadoCargandoPrincipal(false)
+                return@launch
+            }
+
             try {
                 // Paso 1: Detener inmediatamente el ForegroundService de rastreo GPS
                 val intencionServicio = Intent(this@MainActivity, ServicioUbicacion::class.java).apply {

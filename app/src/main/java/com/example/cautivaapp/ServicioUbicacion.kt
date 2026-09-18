@@ -64,6 +64,21 @@ class ServicioUbicacion : Service() {
                 super.onLocationResult(resultadoUbicacion)
                 val ubicacion = resultadoUbicacion.lastLocation ?: return
 
+                // Filtro de calidad y precisión para evitar saltos erráticos y muestras antiguas
+                val precisionMetros = ubicacion.accuracy
+                val tiempoMuestra = ubicacion.time
+                val tiempoActual = System.currentTimeMillis()
+
+                if (precisionMetros > 30.0f) {
+                    Log.d(ETIQUETA_LOG, "Muestra descartada por baja precisión: ${precisionMetros}m")
+                    return
+                }
+
+                if (tiempoMuestra > 0 && (tiempoActual - tiempoMuestra > 10000L)) {
+                    Log.d(ETIQUETA_LOG, "Muestra descartada por desfase temporal: ${tiempoActual - tiempoMuestra}ms")
+                    return
+                }
+
                 val latitud = ubicacion.latitude
                 val longitud = ubicacion.longitude
                 val velocidadKmh = ubicacion.speed * 3.6f
@@ -73,7 +88,7 @@ class ServicioUbicacion : Service() {
 
                 Log.d(
                     ETIQUETA_LOG,
-                    "Coordenada GPS obtenida: Lat=$latitud, Lng=$longitud, Vel=$velocidadKmh km/h, Batería=$nivelBateria%"
+                    "Coordenada GPS obtenida: Lat=$latitud, Lng=$longitud, Vel=$velocidadKmh km/h, Rumbo=$direccionGrados°, Batería=$nivelBateria%, Precisión=${precisionMetros}m"
                 )
 
                 // 1. Emitir transmisión local para actualizar la UI en MainActivity
@@ -163,6 +178,7 @@ class ServicioUbicacion : Service() {
                 latitud = item.latitud,
                 longitud = item.longitud,
                 velocidadKmh = item.velocidadKmh.toFloat(),
+                direccion = item.direccion,
                 nivelBateria = item.nivelBateria,
                 tokenAcceso = tokenAcceso
             )
@@ -174,6 +190,7 @@ class ServicioUbicacion : Service() {
                 latitud = item.latitud,
                 longitud = item.longitud,
                 velocidadKmh = item.velocidadKmh.toFloat(),
+                direccion = item.direccion,
                 nivelBateria = item.nivelBateria,
                 tokenAcceso = tokenAcceso
             )
@@ -242,10 +259,10 @@ class ServicioUbicacion : Service() {
         try {
             val solicitudUbicacion = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
-                25000L // Intervalo deseado de 25 segundos
+                5000L // Intervalo deseado de 5 segundos para telemetría fluida en mapa de administración
             ).apply {
-                setMinUpdateIntervalMillis(10000L) // 10 segundos mínimo
-                setMinUpdateDistanceMeters(30f)   // Desplazamiento mínimo de 30 metros para ahorrar batería
+                setMinUpdateIntervalMillis(2000L) // 2 segundos mínimo
+                setMinUpdateDistanceMeters(2.0f)   // Desplazamiento mínimo de 2 metros
             }.build()
 
             clienteUbicacion.requestLocationUpdates(

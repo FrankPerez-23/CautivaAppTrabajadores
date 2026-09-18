@@ -1,10 +1,14 @@
 package com.example.cautivaapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
@@ -13,7 +17,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -47,6 +50,7 @@ class InicioTurnoActivity : AppCompatActivity() {
         val permisoUbicacionAproximadaConcedido = mapaPermisos[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
 
         if (permisoUbicacionPrecisaConcedido || permisoUbicacionAproximadaConcedido) {
+            verificarYPedirExencionBateria()
             ejecutarRegistroTurno(vehiculoSeleccionado?.id)
         } else {
             Toast.makeText(
@@ -81,6 +85,74 @@ class InicioTurnoActivity : AppCompatActivity() {
         cargarVehiculosActivos()
     }
 
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            validarSesionDispositivoAntesDeAccion()
+        }
+    }
+
+    /**
+     * Consulta a Supabase si este teléfono sigue siendo la sesión activa registrada en 'perfiles.metadatos'.
+     * Si otro teléfono inició sesión, cancela la acción, cierra la sesión local y redirige al Login.
+     */
+    private suspend fun validarSesionDispositivoAntesDeAccion(): Boolean {
+        val idUsuario = gestorSesion.obtenerIdUsuario() ?: return false
+        val tokenAcceso = gestorSesion.obtenerTokenAcceso() ?: ""
+        val idDispositivoLocal = gestorSesion.obtenerIdDispositivoLocal()
+
+        val resultadoDisp = GestorSupabase.obtenerIdDispositivoRegistrado(idUsuario, tokenAcceso)
+        val idRegistradoEnServidor = resultadoDisp.getOrNull()
+
+        if (!idRegistradoEnServidor.isNullOrEmpty() && idRegistradoEnServidor != idDispositivoLocal) {
+            // Sesión anulada en la base de datos por otro teléfono
+            val intencionServicio = Intent(this, ServicioUbicacion::class.java).apply {
+                action = ServicioUbicacion.ACCION_DETENER
+            }
+            stopService(intencionServicio)
+
+            gestorSesion.cerrarSesion()
+            Toast.makeText(
+                this,
+                "Se ha iniciado sesión en otro dispositivo. Tu sesión en este teléfono se ha cerrado.",
+                Toast.LENGTH_LONG
+            ).show()
+
+            val intencionLogin = Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intencionLogin)
+            finish()
+            return false
+        }
+        return true
+    }
+
+    @SuppressLint("BatteryLife")
+    private fun verificarYPedirExencionBateria() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val gestorEnergia = getSystemService(POWER_SERVICE) as PowerManager
+            val nombrePaquete = packageName
+
+            if (!gestorEnergia.isIgnoringBatteryOptimizations(nombrePaquete)) {
+                try {
+                    val intencionExencion = Intent().apply {
+                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        data = Uri.parse("package:$nombrePaquete")
+                    }
+                    startActivity(intencionExencion)
+                } catch (_: Exception) {
+                    try {
+                        val intencionAjustes = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                        startActivity(intencionAjustes)
+                    } catch (_: Exception) {
+                        // Manejo seguro ante ROMs con configuraciones restringidas
+                    }
+                }
+            }
+        }
+    }
+
     private fun inicializarVistas() {
         textoSaludoChofer = findViewById(R.id.tv_saludo_chofer)
         botonCerrarSesionInicio = findViewById(R.id.btn_cerrar_sesion_inicio)
@@ -99,21 +171,37 @@ class InicioTurnoActivity : AppCompatActivity() {
 
     private fun configurarEventos() {
         botonCerrarSesionInicio.setOnClickListener {
-            mostrarDialogoConfirmacionCierreSesion()
+            lifecycleScope.launch {
+                if (validarSesionDispositivoAntesDeAccion()) {
+                    mostrarDialogoConfirmacionCierreSesion()
+                }
+            }
         }
 
         botonCambiarUnidad.setOnClickListener {
-            limpiarVehiculoSeleccionado()
+            lifecycleScope.launch {
+                if (validarSesionDispositivoAntesDeAccion()) {
+                    limpiarVehiculoSeleccionado()
+                }
+            }
         }
 
         botonIniciarJornadaLaboral.setOnClickListener {
-            verificarPermisosYContinuar()
+            lifecycleScope.launch {
+                if (validarSesionDispositivoAntesDeAccion()) {
+                    verificarPermisosYContinuar()
+                }
+            }
         }
 
         campoBuscarVehiculo.setOnItemClickListener { parent, _, position, _ ->
             val vehiculoElegido = parent.getItemAtPosition(position) as? Vehiculo
             if (vehiculoElegido != null) {
-                seleccionarVehiculo(vehiculoElegido)
+                lifecycleScope.launch {
+                    if (validarSesionDispositivoAntesDeAccion()) {
+                        seleccionarVehiculo(vehiculoElegido)
+                    }
+                }
             }
         }
     }
@@ -123,6 +211,11 @@ class InicioTurnoActivity : AppCompatActivity() {
         cambiarEstadoCargando(true)
 
         lifecycleScope.launch {
+            if (!validarSesionDispositivoAntesDeAccion()) {
+                cambiarEstadoCargando(false)
+                return@launch
+            }
+
             val resultado = GestorSupabase.obtenerVehiculosActivos(tokenAcceso)
             cambiarEstadoCargando(false)
 
@@ -210,6 +303,7 @@ class InicioTurnoActivity : AppCompatActivity() {
         if (listaPermisosRequeridos.isNotEmpty()) {
             lanzadorSolicitudPermisos.launch(listaPermisosRequeridos.toTypedArray())
         } else {
+            verificarYPedirExencionBateria()
             ejecutarRegistroTurno(vehiculoSeleccionado?.id)
         }
     }
@@ -221,6 +315,12 @@ class InicioTurnoActivity : AppCompatActivity() {
         cambiarEstadoCargando(true)
 
         lifecycleScope.launch {
+            // VERIFICACIÓN OBLIGATORIA EN BASE DE DATOS ANTES DE CUALQUIER ACCIÓN
+            if (!validarSesionDispositivoAntesDeAccion()) {
+                cambiarEstadoCargando(false)
+                return@launch
+            }
+
             val resultadoTurno = GestorSupabase.iniciarTurnoLaboral(idChofer, idVehiculo, tokenAcceso)
 
             resultadoTurno.fold(
